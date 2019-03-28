@@ -170,6 +170,8 @@ class BatchGen:
             bpe.extend(now)
         
         bpe.append('[SEP]')
+        # BPE = ['chapter', '##ing', 'enemy', 'it', ...]
+        #349 words and 369 BPE
 
         x_bert = self.bert_tokenizer.convert_tokens_to_ids(bpe)
         return x_bert, x_bert_offsets
@@ -392,6 +394,40 @@ def ensemble_predict(pred_list, score_list, voteByCnt = False):
         best_scores += [max(d.items(), key=lambda pair: (pair[1], firstappear[pair[0]]))[1]]
     return (predictions, best_scores)
 
+def save_errors(pred_dict, score_dict):
+    """
+
+    :param pred_dict:
+    :param score_dict:
+    :return:
+
+    obtained with
+    with open('path/to/coqa/conf~/run_X/prediction_or_score.json') as json_file:
+        pred_or_score_json = json.load(json_file)
+    """
+
+
+    total_fail = []
+    partial_fail = []
+    for pred, score in zip(pred_dict, score_dict):
+        #meanf1+=score['f1']
+        if score['f1'] == 0:
+            total_fail.append(pred)
+        elif score['f1']<1.0:
+            partial_fail.append(pred)
+    return total_fail, partial_fail
+
+def dump_errors(coqa, pred_dict, score_dict):
+    total_fail, partial_fail = save_errors(pred_dict, score_dict)
+    fail_dict = []
+    for fail in total_fail:
+        question_test = ""
+        truth = ""
+        predict = ""
+
+    # do the same + score for partial fail
+
+    dev_batches = BatchGen(self.opt, dev_data['data'], self.use_cuda, self.vocab, self.char_vocab, evaluation=True)
 def _f1_score(pred, answers):
     def _score(g_tokens, a_tokens):
         common = Counter(g_tokens) & Counter(a_tokens)
@@ -514,4 +550,5 @@ class AverageMeter(object):
         self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / self.count    
+        self.avg = self.sum / self.count
+
