@@ -139,7 +139,7 @@ class BatchGen:
         self.answer_span_in_context = 'ANSWER_SPAN_IN_CONTEXT_FEATURE' in self.opt
 
         self.ques_max_len = (30 + 1) * self.prev_ans + (25 + 1) * (self.prev_ques + 1)
-        self.char_max_len = 30
+        self.char_max_len = 50
 
         print('*****************')
         print('prev_ques   :', self.prev_ques)

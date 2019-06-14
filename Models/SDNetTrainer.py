@@ -177,16 +177,16 @@ class SDNetTrainer(BaseTrainer):
             if ground_truth[i][0] == -1 and ground_truth[i][1] == 0: # yes
                 targets.append(span_idx + 1)
             if ground_truth[i][0] != -1 and ground_truth[i][1] != -1: # normal span
-                targets.append(ground_truth[i][0] * context_len + ground_truth[i][1])
+                targets.append(int(ground_truth[i][0] * context_len + ground_truth[i][1]))
 
         targets = torch.LongTensor(np.array(targets))
         if self.use_cuda:
             targets = targets.cuda()
         loss = self.loss_func(scores, targets)
-        self.train_loss.update(loss.data[0], 1)
+        self.train_loss.update(loss.item(), 1)
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm(self.network.parameters(), self.opt['grad_clipping'])
+        torch.nn.utils.clip_grad_norm_(self.network.parameters(), self.opt['grad_clipping'])
         self.optimizer.step()
         self.updates += 1
         if 'TUNE_PARTIAL' in self.opt:

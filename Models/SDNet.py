@@ -14,6 +14,12 @@ from Models.Bert.Bert import Bert
 from Models.Layers import MaxPooling, CNN, dropout, RNN_from_opt, set_dropout_prob, weighted_avg, set_seq_dropout, Attention, DeepAttention, LinearSelfAttn, GetFinalScores
 from Utils.CoQAUtils import POS, ENT
 
+from allennlp.modules.elmo import Elmo
+
+options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+
+
 '''
  SDNet
 '''
@@ -85,6 +91,14 @@ class SDNet(nn.Module):
             cdim = bert_dim
             x_input_size += bert_dim
             ques_input_size += bert_dim
+
+        elif 'ELMo' in self.opt:
+            print('Using ELMo')
+            self.Elmo = Elmo(options_file, weight_file, 1, dropout=0)
+            elmo_dim = 1024
+            cdim = elmo_dim
+            x_input_size += elmo_dim
+            ques_input_size += elmo_dim
 
         self.pre_align = Attention(vocab_dim, opt['prealign_hidden'], correlation_func = 3, do_similarity = True)
         x_input_size += vocab_dim
@@ -197,6 +211,13 @@ class SDNet(nn.Module):
                 x_cemb_mid = self.Bert(x_bert, x_bert_mask, x_bert_offsets, x_single_mask)
                 x_cemb_mid = x_cemb_mid.expand(batch_size, -1, -1)
                 ques_cemb_mid = self.Bert(q_bert, q_bert_mask, q_bert_offsets, q_mask)
+
+            x_input_list.append(x_cemb_mid)
+            ques_input_list.append(ques_cemb_mid)
+        elif 'ELMo' in self.opt:
+            x_cemb_mid = self.Elmo(x_char)['elmo_representations'][0]
+            x_cemb_mid = x_cemb_mid.expand(batch_size, -1, -1)
+            ques_cemb_mid = self.Elmo(q_char)['elmo_representations'][0]
 
             x_input_list.append(x_cemb_mid)
             ques_input_list.append(ques_cemb_mid)

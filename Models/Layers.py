@@ -46,7 +46,7 @@ class CNN(nn.Module):
         padding_size = int((window_size - 1) / 2)
         self._output_size = output_size
         self.cnn = nn.Conv2d(1, output_size, (window_size, input_size), padding = (padding_size, 0), bias = False)
-        init.xavier_uniform(self.cnn.weight)
+        init.xavier_uniform_(self.cnn.weight)
 
     @property
     def output_size(self):
