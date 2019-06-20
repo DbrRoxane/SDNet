@@ -170,6 +170,8 @@ class BatchGen:
             bpe.extend(now)
         
         bpe.append('[SEP]')
+        # BPE = ['chapter', '##ing', 'enemy', 'it', ...]
+        #349 words and 369 BPE
 
         x_bert = self.bert_tokenizer.convert_tokens_to_ids(bpe)
         return x_bert, x_bert_offsets
@@ -514,4 +516,5 @@ class AverageMeter(object):
         self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / self.count    
+        self.avg = self.sum / self.count
+
