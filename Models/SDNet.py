@@ -85,8 +85,8 @@ class SDNet(nn.Module):
                 print('BERT_LINEAR_COMBINE')
                 self.alphaBERT = nn.Parameter(torch.Tensor(bert_layers), requires_grad=True)
                 self.gammaBERT = nn.Parameter(torch.Tensor(1, 1), requires_grad=True)
-                torch.nn.init.constant(self.alphaBERT, 1.0)
-                torch.nn.init.constant(self.gammaBERT, 1.0)
+                torch.nn.init.constant_(self.alphaBERT, 1.0)
+                torch.nn.init.constant_(self.gammaBERT, 1.0)
                 
             cdim = bert_dim
             x_input_size += bert_dim
@@ -96,6 +96,7 @@ class SDNet(nn.Module):
             print('Using ELMo')
             self.Elmo = Elmo(options_file, weight_file, 1, dropout=0)
             elmo_dim = 1024
+
             cdim = elmo_dim
             x_input_size += elmo_dim
             ques_input_size += elmo_dim
