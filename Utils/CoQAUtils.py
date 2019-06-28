@@ -19,6 +19,7 @@ import json
 import numpy as np
 import pandas as pd
 from Models.Bert.tokenization import BertTokenizer
+from allennlp.modules.elmo import batch_to_ids
 from Utils.GeneralUtils import normalize_text, nlp
 from Utils.Constants import *
 from torch.autograd import Variable
@@ -201,6 +202,9 @@ class BatchGen:
                 x_bert = torch.tensor([x_bert], dtype = torch.long)
                 x_bert_offsets = torch.tensor([x_bert_offsets], dtype = torch.long)
 
+            elif 'ELMo' in self.opt:
+                x_char_elmo = batch_to_ids([datum['annotated_context']['word']])
+
             x_pos = torch.LongTensor(1, x_len).fill_(0)
             x_ent = torch.LongTensor(1, x_len).fill_(0)            
             
@@ -211,6 +215,7 @@ class BatchGen:
 
             query = torch.LongTensor(batch_size, self.ques_max_len).fill_(0)
             query_char = torch.LongTensor(batch_size, self.ques_max_len, self.char_max_len).fill_(0)
+            query_char_elmo = torch.LongTensor(batch_size, self.ques_max_len, self.char_max_len).fill_(0)
             query_bert_offsets = torch.LongTensor(batch_size, self.ques_max_len, 2).fill_(0)
             q_bert_list = []
             ground_truth = torch.LongTensor(batch_size, 2).fill_(-1)
@@ -247,26 +252,35 @@ class BatchGen:
 
                     q = [2] + datum['qas'][j]['annotated_question']['wordid']
                     q_char = [[0]] + datum['qas'][j]['annotated_question']['charid']
+                    if 'ELMo' in self.opt:
+                        q_char_elmo = batch_to_ids([['<Q>'] + datum['qas'][j]['annotated_question']['word']])[0]
                     if j >= i - self.prev_ques and p + len(q) <= self.ques_max_len:
                         ques_words.extend(['<Q>'] + datum['qas'][j]['annotated_question']['word'])
                         # <Q>: 2, <A>: 3                    
                         query[i, p:(p+len(q))] = torch.LongTensor(q)
-                        if self.use_char_cnn:
+                        if self.use_char_cnn or 'ELMo'in self.opt:
                             for k in range(len(q_char)):
                                 t = min(self.char_max_len, len(q_char[k]))
                                 query_char[i, p + k, :t] = torch.LongTensor(q_char[k][:t])
+                                if 'ELMo'in self.opt:
+                                    query_char_elmo[i, p + k, :t] = torch.LongTensor(q_char_elmo[k][:t])
                         ques = datum['qas'][j]['question'].lower()
                         p += len(q)
 
                     a = [3] + datum['qas'][j]['annotated_answer']['wordid']
                     a_char = [[0]] + datum['qas'][j]['annotated_answer']['charid']
+                    if 'ELMo' in self.opt:
+                        a_char_elmo = batch_to_ids([['<A>']+datum['qas'][j]['annotated_answer']['word']])[0]
                     if j < i and j >= i - self.prev_ans and p + len(a) <= self.ques_max_len:
                         ques_words.extend(['<A>'] + datum['qas'][j]['annotated_answer']['word'])
-                        query[i, p:(p+len(a))] = torch.LongTensor(a) 
-                        if self.use_char_cnn:
+                        query[i, p:(p+len(a))] = torch.LongTensor(a)
+                        if self.use_char_cnn or 'ELMo'in self.opt:
                             for k in range(len(a_char)):
                                 t = min(self.char_max_len, len(a_char[k]))
                                 query_char[i, p + k, :t] = torch.LongTensor(a_char[k][:t])
+                                if 'ELMo' in self.opt:
+                                    query_char_elmo[i, p + k, :t] = torch.LongTensor(a_char_elmo[k][:t])
+
                         p += len(a)
 
                         if self.answer_span_in_context:
@@ -333,6 +347,17 @@ class BatchGen:
                 query_bert_mask = None
                 query_bert_offsets = None
 
+            if 'ELMo' in self.opt:
+                if self.use_cuda:
+                    x_char_elmo = Variable(x_char_elmo.cuda(async=True))
+                    query_char_elmo = Variable(query_char_elmo.cuda(async=True))
+                else:
+                    x_char_elmo = Variable(x_char_elmo)
+                    query_char_elmo = Variable(query_char_elmo.cuda(async=True))
+            else:
+                x_char_elmo = None
+                query_char_elmo = None
+
             if self.use_char_cnn:
                 x_char_mask = 1 - torch.eq(x_char, 0)
                 query_char_mask = 1 - torch.eq(query_char, 0)
@@ -372,8 +397,9 @@ class BatchGen:
                 query = Variable(query)
                 query_mask = Variable(query_mask)
                 ground_truth = Variable(ground_truth)
-            yield(x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, query, query_mask, query_char, query_char_mask,
-            query_bert, query_bert_mask, query_bert_offsets, ground_truth, context_str, context_words, context_word_offsets, answer_strs, context_id, turn_ids)
+            yield(x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, x_char_elmo,
+                  query, query_mask, query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, query_char_elmo,
+                  ground_truth, context_str, context_words, context_word_offsets, answer_strs, context_id, turn_ids)
 
 #===========================================================================
 #=================== For standard evaluation in CoQA =======================

@@ -14,7 +14,7 @@ from Models.Bert.Bert import Bert
 from Models.Layers import MaxPooling, CNN, dropout, RNN_from_opt, set_dropout_prob, weighted_avg, set_seq_dropout, Attention, DeepAttention, LinearSelfAttn, GetFinalScores
 from Utils.CoQAUtils import POS, ENT
 
-from allennlp.modules.elmo import Elmo
+from allennlp.modules.elmo import Elmo, batch_to_ids
 
 options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
 weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
@@ -188,7 +188,9 @@ class SDNet(nn.Module):
       score_yes: batch x 1
       score_noanswer: batch x 1
     '''
-    def forward(self, x, x_single_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, q, q_mask, q_char, q_char_mask, q_bert, q_bert_mask, q_bert_offsets, context_len):
+    def forward(self, x, x_single_mask, x_char, x_char_mask, x_features, x_pos, x_ent,
+                x_bert, x_bert_mask, x_bert_offsets, x_char_elmo,
+                q, q_mask, q_char, q_char_mask, q_bert, q_bert_mask, q_bert_offsets, q_char_elmo, context_len):
         batch_size = q.shape[0]
         x_mask = x_single_mask.expand(batch_size, -1)
         x_word_embed = self.vocab_embed(x).expand(batch_size, -1, -1) # batch x x_len x vocab_dim
@@ -198,7 +200,7 @@ class SDNet(nn.Module):
         ques_input_list = [dropout(ques_word_embed, p=self.opt['dropout_emb'], training=self.drop_emb)] # batch x q_len x vocab_dim
 
         # contextualized embedding
-        x_cemb = ques_cemb = None        
+        x_cemb = ques_cemb = None
         if 'BERT' in self.opt:
             x_cemb = ques_cemb = None
             
@@ -216,12 +218,15 @@ class SDNet(nn.Module):
             x_input_list.append(x_cemb_mid)
             ques_input_list.append(ques_cemb_mid)
         elif 'ELMo' in self.opt:
-            x_cemb_mid = self.Elmo(x_char)['elmo_representations'][0]
+            x_cemb_mid = self.Elmo(x_char_elmo)['elmo_representations'][0]
             x_cemb_mid = x_cemb_mid.expand(batch_size, -1, -1)
-            ques_cemb_mid = self.Elmo(q_char)['elmo_representations'][0]
+            ques_cemb_mid = self.Elmo(q_char_elmo)['elmo_representations'][0]
 
             x_input_list.append(x_cemb_mid)
             ques_input_list.append(ques_cemb_mid)
+
+            #x_cemb = 1 - torch.eq(x_cemb_mid, 0)
+            #ques_cemb = 1 - torch.eq(ques_cemb_mid, 0)
 
         if 'CHAR_CNN' in self.opt:
             x_char_final = self.character_cnn(x_char, x_char_mask)

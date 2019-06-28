@@ -154,14 +154,19 @@ class SDNetTrainer(BaseTrainer):
         self.network.train()
         self.network.drop_emb = True
 
-        x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, query, query_mask, \
-        query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, ground_truth, context_str, context_words, _, _, _, _ = batch
+        x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, x_char_elmo,\
+        query, query_mask, query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, quer_char_elmo,\
+        ground_truth, context_str, context_words, _, _, _, _ = batch
 
         # Run forward
         # score_s, score_e: batch x context_word_num
         # score_yes, score_no, score_no_answer: batch x 1
-        score_s, score_e, score_yes, score_no, score_no_answer = self.network(x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, 
-            query, query_mask, query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, len(context_words))
+        score_s, score_e, score_yes, score_no, score_no_answer = self.network(x, x_mask, x_char, x_char_mask, x_features,
+                                                                              x_pos, x_ent, x_bert, x_bert_mask,
+                                                                              x_bert_offsets, x_char_elmo, query, query_mask,
+                                                                              query_char, query_char_mask, query_bert,
+                                                                              query_bert_mask, query_bert_offsets,
+                                                                              quer_char_elmo, len(context_words))
         max_len = self.opt['max_len'] or score_s.size(1)
         batch_size = score_s.shape[0]
         context_len = score_s.size(1)
@@ -197,13 +202,16 @@ class SDNetTrainer(BaseTrainer):
         self.network.drop_emb = False
 
         # Run forward
-        x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, query, query_mask, \
-        query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, ground_truth, context_str, context_words, \
+        x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, x_char_elmo, query, query_mask, \
+        query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, query_char_elmo, ground_truth, context_str, context_words, \
         context_word_offsets, answers, context_id, turn_ids = batch
-        
+        2
         context_len = len(context_words)
-        score_s, score_e, score_yes, score_no, score_no_answer = self.network(x, x_mask, x_char, x_char_mask, x_features, x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets, 
-            query, query_mask, query_char, query_char_mask, query_bert, query_bert_mask, query_bert_offsets, len(context_words))
+        score_s, score_e, score_yes, score_no, score_no_answer = self.network(x, x_mask, x_char, x_char_mask, x_features,
+                                                                              x_pos, x_ent, x_bert, x_bert_mask, x_bert_offsets,
+                                                                              x_char_elmo, query, query_mask, query_char,
+                                                                              query_char_mask, query_bert, query_bert_mask,
+                                                                              query_bert_offsets, query_char_elmo, len(context_words))
         batch_size = score_s.shape[0]
         max_len = self.opt['max_len'] or score_s.size(1)
 

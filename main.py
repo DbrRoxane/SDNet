@@ -27,7 +27,12 @@ for key,val in cmdline_args.__dict__.items():
     if val is not None and key not in ['command', 'conf_file']:
         opt[key] = val
 
-model = SDNetTrainer(opt)    
-    
+#model = SDNetTrainer(opt)
+
+model = SDNetTrainer(opt)
+#model.load_model('../coqa/conf~/run_36/best_model.pt')
+
 print('Select command: ' + command)
 model.train()
+
+#model.
